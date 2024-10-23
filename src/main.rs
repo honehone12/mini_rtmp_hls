@@ -15,13 +15,19 @@ struct HlsConfig {
 }
 
 struct Service {
+    addr: String,
     rtmp_cfg: RtmpConfig,
     hls_cfg: HlsConfig
 }
 
 impl Service {
-    fn new(rtmp_port: u16, hls_port: u16) -> Self {
+    fn new(
+        addr: String, 
+        rtmp_port: u16, 
+        hls_port: u16
+    ) -> Self {
         Self {
+            addr,
             rtmp_cfg: RtmpConfig { 
                 port: rtmp_port 
             },
@@ -64,7 +70,11 @@ impl Service {
     async fn run_rtmp(&self, stream_event_sender: StreamHubEventSender)
     -> anyhow::Result<()> {
         let mut rtmp_server = RtmpServer::new(
-            format!("127.0.0.1:{}", self.rtmp_cfg.port), 
+            format!(
+                "{}:{}",
+                self.addr, 
+                self.rtmp_cfg.port
+            ), 
             stream_event_sender, 
             1, 
             None
@@ -91,7 +101,11 @@ impl Service {
 
     async fn run_hls(&self) -> anyhow::Result<()> {
         hls::server::run(
-            format!("127.0.0.1:{}", self.hls_cfg.port), 
+            format!(
+                "{}:{}",
+                self.addr, 
+                self.hls_cfg.port
+            ), 
             None
         ).await
             .map_err(|e| anyhow!("{e}"))?;
@@ -103,7 +117,11 @@ impl Service {
 async fn main() {
     env_logger::init();
 
-    let service = Service::new(1935, 8080);
+    let service = Service::new(
+        String::from("127.0.0.1"), 
+        1935, 
+        8080
+    );
     if let Err(e) = service.run().await {
         panic!("{e}");
     }
